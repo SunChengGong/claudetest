@@ -1,0 +1,412 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>番茄钟</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .container {
+            background: #1e2a4a;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            text-align: center;
+            width: 420px;
+        }
+        h1 {
+            color: #ff6b6b;
+            font-size: 26px;
+            margin-bottom: 8px;
+        }
+        .mode-tabs {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .mode-tab {
+            padding: 8px 24px;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.06);
+            color: #888;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .mode-tab.active-work { border-color: #ff6b6b; color: #ff6b6b; background: rgba(255,107,107,0.1); }
+        .mode-tab.active-break { border-color: #4ecdc4; color: #4ecdc4; background: rgba(78,205,196,0.1); }
+        .timer-circle {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            margin: 10px auto;
+        }
+        .timer-circle svg { transform: rotate(-90deg); }
+        .timer-circle .bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 6; }
+        .timer-circle .progress {
+            fill: none;
+            stroke-width: 6;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.3s;
+        }
+        .timer-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .timer-text .time {
+            font-size: 52px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+            letter-spacing: 2px;
+        }
+        .timer-text .label {
+            font-size: 14px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 24px 0;
+        }
+        .btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 90px;
+        }
+        .btn-primary { background: #ff6b6b; color: #fff; }
+        .btn-primary:hover { background: #e85a5a; transform: translateY(-1px); }
+        .btn-primary.break-mode { background: #4ecdc4; }
+        .btn-primary.break-mode:hover { background: #3dbdb5; }
+        .btn-secondary { background: rgba(255,255,255,0.08); color: #aaa; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.14); color: #fff; }
+        .settings {
+            background: rgba(255,255,255,0.04);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 10px;
+        }
+        .settings-row {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+        .settings-group {
+            text-align: left;
+        }
+        .settings-group label {
+            display: block;
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .settings-group input {
+            width: 100px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            font-size: 16px;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .settings-group input:focus { border-color: #ff6b6b; }
+        .settings-group input.break-input:focus { border-color: #4ecdc4; }
+        .settings-group .unit { font-size: 13px; color: #666; margin-left: 4px; }
+        .status-text {
+            font-size: 14px;
+            color: #666;
+            margin-top: 12px;
+        }
+        .status-text .count { color: #ff6b6b; font-weight: 600; }
+        .status-text.break-status .count { color: #4ecdc4; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🍅 番茄钟</h1>
+
+    <div class="mode-tabs">
+        <div class="mode-tab active-work" id="workTab">⏰ 工作时间</div>
+        <div class="mode-tab" id="breakTab">☕ 休息时间</div>
+    </div>
+
+    <div class="timer-circle">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+            <circle class="bg" cx="130" cy="130" r="115"/>
+            <circle class="progress" id="progressRing" cx="130" cy="130" r="115"
+                    stroke="#ff6b6b"
+                    stroke-dasharray="722.57" stroke-dashoffset="0"/>
+        </svg>
+        <div class="timer-text">
+            <div class="time" id="timerDisplay">25:00</div>
+            <div class="label" id="statusLabel">准备开始</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-primary" id="startBtn">▶ 开始</button>
+        <button class="btn btn-secondary" id="resetBtn">↻ 重置</button>
+    </div>
+
+    <div class="settings">
+        <div class="settings-row">
+            <div class="settings-group">
+                <label>⏰ 工作时间</label>
+                <div>
+                    <input type="number" id="workMinutes" value="25" min="1" max="120">
+                    <span class="unit">分钟</span>
+                </div>
+            </div>
+            <div class="settings-group">
+                <label>☕ 休息时间</label>
+                <div>
+                    <input type="number" id="breakMinutes" value="5" min="1" max="60">
+                    <span class="unit">分钟</span>
+                </div>
+            </div>
+        </div>
+        <div class="status-text" id="statusText">
+            已完成 <span class="count" id="pomodoroCount">0</span> 个番茄
+        </div>
+    </div>
+</div>
+
+<script>
+    const timerDisplay = document.getElementById('timerDisplay');
+    const statusLabel = document.getElementById('statusLabel');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const progressRing = document.getElementById('progressRing');
+    const workInput = document.getElementById('workMinutes');
+    const breakInput = document.getElementById('breakMinutes');
+    const pomodoroCountEl = document.getElementById('pomodoroCount');
+    const statusText = document.getElementById('statusText');
+    const workTab = document.getElementById('workTab');
+    const breakTab = document.getElementById('breakTab');
+
+    const CIRCUMFERENCE = 2 * Math.PI * 115;
+
+    let isWorkMode = true;
+    let timeRemaining = 25 * 60;
+    let totalTime = 25 * 60;
+    let isRunning = false;
+    let isPaused = false;
+    let timerInterval = null;
+    let pomodoroCount = parseInt(localStorage.getItem('pomodoroCount') || '0');
+
+    pomodoroCountEl.textContent = pomodoroCount;
+
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function updateDisplay() {
+        timerDisplay.textContent = formatTime(timeRemaining);
+        const progress = totalTime > 0 ? (timeRemaining / totalTime) * CIRCUMFERENCE : 0;
+        progressRing.style.strokeDashoffset = CIRCUMFERENCE - progress;
+    }
+
+    function updateModeUI() {
+        const isWork = isWorkMode;
+        const color = isWork ? '#ff6b6b' : '#4ecdc4';
+
+        progressRing.setAttribute('stroke', color);
+        startBtn.className = `btn btn-primary${isWork ? '' : ' break-mode'}`;
+        statusText.className = `status-text${isWork ? '' : ' break-status'}`;
+        workTab.className = `mode-tab${isWork ? ' active-work' : ''}`;
+        breakTab.className = `mode-tab${isWork ? '' : ' active-break'}`;
+
+        statusLabel.textContent = isWork ? '⏰ 工作中' : '☕ 休息中';
+
+        if (!isRunning && !isPaused) {
+            statusLabel.textContent = isWork ? '准备开始工作' : '准备开始休息';
+        }
+
+        if (isRunning || isPaused) {
+            startBtn.textContent = isPaused ? '▶ 继续' : '⏸ 暂停';
+        } else {
+            startBtn.textContent = '▶ 开始';
+        }
+    }
+
+    function switchMode(workMode) {
+        if (isRunning) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        isWorkMode = workMode;
+        isRunning = false;
+        isPaused = false;
+
+        const minutes = workMode ? parseInt(workInput.value) || 25 : parseInt(breakInput.value) || 5;
+        timeRemaining = minutes * 60;
+        totalTime = minutes * 60;
+
+        updateDisplay();
+        updateModeUI();
+    }
+
+    function tick() {
+        if (timeRemaining > 0) {
+            timeRemaining--;
+            updateDisplay();
+        }
+
+        if (timeRemaining <= 0) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            isRunning = false;
+            isPaused = false;
+
+            if (isWorkMode) {
+                pomodoroCount++;
+                pomodoroCountEl.textContent = pomodoroCount;
+                localStorage.setItem('pomodoroCount', pomodoroCount);
+                // 自动切换到休息
+                switchMode(false);
+                statusLabel.textContent = '☕ 休息时间到！';
+            } else {
+                statusLabel.textContent = '⏰ 工作时间到！';
+                // 自动切换到工作
+                switchMode(true);
+            }
+
+            // 播放提示音
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                [523.25, 659.25, 783.99].forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = freq;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.2);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.2 + 0.3);
+                    osc.start(ctx.currentTime + i * 0.2);
+                    osc.stop(ctx.currentTime + i * 0.2 + 0.3);
+                });
+            } catch(e) {}
+
+            updateModeUI();
+            startBtn.textContent = '▶ 开始';
+        }
+    }
+
+    function toggleTimer() {
+        if (!isRunning && timeRemaining <= 0) {
+            // 如果时间已耗尽，重置
+            const minutes = isWorkMode ? parseInt(workInput.value) || 25 : parseInt(breakInput.value) || 5;
+            timeRemaining = minutes * 60;
+            totalTime = minutes * 60;
+            updateDisplay();
+        }
+
+        if (isPaused || (!isRunning && timeRemaining > 0)) {
+            // 继续或开始
+            isRunning = true;
+            isPaused = false;
+            timerInterval = setInterval(tick, 1000);
+            statusLabel.textContent = isWorkMode ? '⏰ 工作中' : '☕ 休息中';
+            updateModeUI();
+        } else if (isRunning) {
+            // 暂停
+            clearInterval(timerInterval);
+            timerInterval = null;
+            isRunning = false;
+            isPaused = true;
+            statusLabel.textContent = '⏸ 已暂停';
+            startBtn.textContent = '▶ 继续';
+        }
+    }
+
+    function resetTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        isRunning = false;
+        isPaused = false;
+
+        const minutes = isWorkMode ? parseInt(workInput.value) || 25 : parseInt(breakInput.value) || 5;
+        timeRemaining = minutes * 60;
+        totalTime = minutes * 60;
+
+        updateDisplay();
+        updateModeUI();
+        statusLabel.textContent = isWorkMode ? '准备开始工作' : '准备开始休息';
+    }
+
+    function applySettings() {
+        if (isRunning || isPaused) return;
+        const minutes = isWorkMode ? parseInt(workInput.value) || 25 : parseInt(breakInput.value) || 5;
+        timeRemaining = minutes * 60;
+        totalTime = minutes * 60;
+        updateDisplay();
+    }
+
+    // 事件绑定
+    startBtn.addEventListener('click', toggleTimer);
+    resetBtn.addEventListener('click', resetTimer);
+
+    workTab.addEventListener('click', () => {
+        if (!isWorkMode) switchMode(true);
+    });
+
+    breakTab.addEventListener('click', () => {
+        if (isWorkMode) switchMode(false);
+    });
+
+    workInput.addEventListener('change', () => {
+        if (isWorkMode) applySettings();
+    });
+
+    breakInput.addEventListener('change', () => {
+        if (!isWorkMode) applySettings();
+    });
+
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Space') {
+            e.preventDefault();
+            toggleTimer();
+        }
+    });
+
+    // 初始化
+    timeRemaining = 25 * 60;
+    totalTime = 25 * 60;
+    updateDisplay();
+    updateModeUI();
+</script>
+
+</body>
+</html>
