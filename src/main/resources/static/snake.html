@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -48,6 +48,32 @@
             font-size: 14px;
         }
         .controls p { margin: 4px 0; }
+        .difficulty-selector {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .difficulty-selector label {
+            color: #aaa;
+            font-size: 14px;
+        }
+        .difficulty-selector select {
+            padding: 8px 14px;
+            background: #0f3460;
+            color: #fff;
+            border: 2px solid #1a4a7a;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .difficulty-selector select:hover,
+        .difficulty-selector select:focus {
+            border-color: #00d2ff;
+        }
         .restart-btn {
             margin-top: 15px;
             padding: 10px 30px;
@@ -80,6 +106,15 @@
     </div>
     <canvas id="gameCanvas" width="400" height="400"></canvas>
     <div class="game-over" id="gameOver">游戏结束!</div>
+    <div class="difficulty-selector">
+        <label for="difficulty">🎮 难度:</label>
+        <select id="difficulty">
+            <option value="easy">简单</option>
+            <option value="normal" selected>普通</option>
+            <option value="hard">困难</option>
+            <option value="hell">地狱</option>
+        </select>
+    </div>
     <div class="controls">
         <p>方向键 / WASD 控制移动</p>
         <p>按 空格键 暂停/继续</p>
@@ -100,9 +135,18 @@
 
     const DIR = { UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3 };
 
+    // 难度对应的游戏速度（毫秒/帧），数值越大越慢
+    const SPEEDS = {
+        easy: 150,
+        normal: 100,
+        hard: 65,
+        hell: 40
+    };
+
     let snake, food, direction, nextDirection, score, highScore;
     let gameRunning, gameOver, paused;
     let gameLoop;
+    let currentDifficulty, currentSpeed;
 
     function init() {
         snake = [
@@ -120,6 +164,12 @@
         gameOverEl.style.display = 'none';
         spawnFood();
         draw();
+        startGameLoop();
+    }
+
+    function startGameLoop() {
+        if (gameLoop) clearInterval(gameLoop);
+        gameLoop = setInterval(gameStep, currentSpeed);
     }
 
     function spawnFood() {
@@ -234,10 +284,20 @@
 
     document.getElementById('restartBtn').addEventListener('click', init);
 
+    // 难度选择处理
+    document.getElementById('difficulty').addEventListener('change', (e) => {
+        currentDifficulty = e.target.value;
+        currentSpeed = SPEEDS[currentDifficulty];
+        localStorage.setItem('snakeDifficulty', currentDifficulty);
+        if (gameRunning || gameOver) init();
+    });
+
     highScore = parseInt(localStorage.getItem('snakeHighScore') || '0');
     highScoreEl.textContent = highScore;
+    currentDifficulty = localStorage.getItem('snakeDifficulty') || 'normal';
+    currentSpeed = SPEEDS[currentDifficulty];
+    document.getElementById('difficulty').value = currentDifficulty;
     init();
-    gameLoop = setInterval(gameStep, 100);
 </script>
 
 </body>
